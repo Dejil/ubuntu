@@ -2,21 +2,22 @@
   hosts: all
   vars:
   tasks:
-    - name: Install apache packages 
-      yum:
-        name: httpd
-        state: present
-    - name: ensure httpd is running
-      service:
-        name: httpd 
-        state: started
-        enabled: yes
-    - name: Open port 80 for http access
-      firewalld:
-        service: http
-        permanent: true
-        state: enabled
-    - name: Restart the firewalld service to load in the firewall changes
-      service: 
-        name: firewalld 
-        state: restarted
+    - name: Upgrade installed apt packages
+      apt:
+        upgrade: dist
+      register: upgrade
+      retries: 15
+      delay: 5
+    - name: Check if a reboot is needed for Debian-based systems
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required
+    - name: Reboot the server if needed
+      reboot:
+        msg: "Reboot initiated by Ansible because of reboot required file."
+        connect_timeout: 5
+        reboot_timeout: 600
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+        test_command: whoami
+      when: reboot_required.stat.exists
